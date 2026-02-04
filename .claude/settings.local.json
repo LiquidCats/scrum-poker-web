@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go build:*)",
+      "Bash(npm install:*)",
+      "Bash(npx --prefix /Users/ishabanov/Code/scrum-poker-web/frontend nuxt typecheck:*)",
+      "Bash(npx nuxt typecheck:*)",
+      "Bash(OLDPWD=/Users/ishabanov/Code/scrum-poker-web/frontend)",
+      "Bash(export:*)",
+      "Bash(/bin/bash -c 'cd /Users/ishabanov/Code/scrum-poker-web/frontend && npx nuxt typecheck 2>&1':*)"
+    ]
+  }
+}
