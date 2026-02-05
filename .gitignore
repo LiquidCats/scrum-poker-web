@@ -1,0 +1,9 @@
+.claude/
+.idea/
+.nuxt/
+.output/
+node_modules/
+.env
+*.key
+.secret/
+*.secret

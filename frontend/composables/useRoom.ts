@@ -6,6 +6,34 @@ const wsConnection = ref<WebSocket | null>(null)
 const isConnected = ref(false)
 const connectionError = ref<string | null>(null)
 
+// Session persistence helpers
+function saveSession(roomId: string, playerId: string, playerName: string) {
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.setItem('poker_roomId', roomId)
+    sessionStorage.setItem('poker_playerId', playerId)
+    sessionStorage.setItem('poker_playerName', playerName)
+  }
+}
+
+function loadSession(): { roomId: string; playerId: string; playerName: string } | null {
+  if (typeof sessionStorage === 'undefined') return null
+  const roomId = sessionStorage.getItem('poker_roomId')
+  const playerId = sessionStorage.getItem('poker_playerId')
+  const playerName = sessionStorage.getItem('poker_playerName')
+  if (roomId && playerId && playerName) {
+    return { roomId, playerId, playerName }
+  }
+  return null
+}
+
+function clearSession() {
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.removeItem('poker_roomId')
+    sessionStorage.removeItem('poker_playerId')
+    sessionStorage.removeItem('poker_playerName')
+  }
+}
+
 function getApiBase(): string {
   const config = useRuntimeConfig()
   return (config.public.apiBase as string) || ''
@@ -249,6 +277,16 @@ export function useRoom() {
     }
   }
 
+  // Keep currentPlayer ref pointing at the same object that lives in the players array.
+  // Must be called after every players array replacement so the two stay in sync.
+  function syncCurrentPlayer() {
+    if (!currentRoom.value || !currentPlayer.value) return
+    const found = currentRoom.value.players.find(p => p.id === currentPlayer.value!.id)
+    if (found) {
+      currentPlayer.value = found
+    }
+  }
+
   function updateRoomState(state: any) {
     if (!state || !currentRoom.value) return
 
@@ -260,7 +298,22 @@ export function useRoom() {
     currentRoom.value.settings = state.settings ?? currentRoom.value.settings
 
     if (state.players) {
-      currentRoom.value.players = state.players.map(mapPlayer)
+      // Preserve own player's vote — server hides votes until reveal
+      const myId = currentPlayer.value?.id
+      const myCurrentVote = currentPlayer.value?.vote ?? null
+      const myHasVoted = currentPlayer.value?.hasVoted ?? false
+
+      currentRoom.value.players = state.players.map((p: any) => {
+        const mapped = mapPlayer(p)
+        // Restore own vote that the server intentionally hides pre-reveal
+        if (mapped.id === myId && myHasVoted && !mapped.vote) {
+          mapped.vote = myCurrentVote
+          mapped.hasVoted = myHasVoted
+        }
+        return mapped
+      })
+
+      syncCurrentPlayer()
     }
   }
 
@@ -294,6 +347,7 @@ export function useRoom() {
 
     currentRoom.value = room
     currentPlayer.value = room.players.find(p => p.id === playerId) || null
+    saveSession(room.id, playerId, playerName)
 
     await connectWebSocket()
     sendWSMessage({
@@ -338,6 +392,7 @@ export function useRoom() {
 
       currentRoom.value = room
       currentPlayer.value = room.players.find(p => p.id === playerId) || null
+      saveSession(room.id, playerId, playerName)
 
       await connectWebSocket()
       sendWSMessage({
@@ -351,6 +406,58 @@ export function useRoom() {
 
       return true
     } catch {
+      return false
+    }
+  }
+
+  async function rejoinRoom(roomId: string): Promise<boolean> {
+    const session = loadSession()
+    if (!session || session.roomId !== roomId) return false
+
+    try {
+      const apiBase = getApiBase()
+      const response = await $fetch<{ room: any; playerId: string }>(`${apiBase}/api/rooms/${roomId}/join`, {
+        method: 'POST',
+        body: { playerName: session.playerName, playerId: session.playerId },
+      })
+
+      const roomData = response.room
+      const playerId = response.playerId
+
+      const room: Room = {
+        id: roomData.id,
+        name: roomData.name,
+        host: roomData.hostId,
+        players: (roomData.players || []).map(mapPlayer),
+        currentIssue: roomData.currentIssue || null,
+        status: roomData.status as RoomStatus,
+        deck: roomData.deck || [],
+        createdAt: new Date(),
+        settings: roomData.settings || {
+          allowSpectators: true,
+          autoReveal: false,
+          showAverage: true,
+          timer: null,
+        },
+      }
+
+      currentRoom.value = room
+      currentPlayer.value = room.players.find(p => p.id === playerId) || null
+      saveSession(room.id, playerId, session.playerName)
+
+      await connectWebSocket()
+      sendWSMessage({
+        type: 'join_room',
+        payload: {
+          roomId: room.id,
+          playerName: session.playerName,
+          playerId,
+        },
+      })
+
+      return true
+    } catch {
+      clearSession()
       return false
     }
   }
@@ -369,12 +476,10 @@ export function useRoom() {
     if (!currentRoom.value || !currentPlayer.value) return
     if (currentRoom.value.status === 'revealed') return
 
-    const player = currentRoom.value.players.find(p => p.id === currentPlayer.value?.id)
-    if (player) {
-      player.vote = value
-      player.hasVoted = true
-      currentRoom.value.status = 'voting'
-    }
+    // Update both the array entry and currentPlayer directly
+    currentPlayer.value.vote = value
+    currentPlayer.value.hasVoted = true
+    currentRoom.value.status = 'voting'
 
     sendWSMessage({
       type: 'cast_vote',
@@ -386,11 +491,9 @@ export function useRoom() {
     if (!currentRoom.value || !currentPlayer.value) return
     if (currentRoom.value.status === 'revealed') return
 
-    const player = currentRoom.value.players.find(p => p.id === currentPlayer.value?.id)
-    if (player) {
-      player.vote = null
-      player.hasVoted = false
-    }
+    // Update both the array entry and currentPlayer directly
+    currentPlayer.value.vote = null
+    currentPlayer.value.hasVoted = false
 
     sendWSMessage({ type: 'clear_vote' })
   }
@@ -434,6 +537,7 @@ export function useRoom() {
     currentRoom.value = null
     currentPlayer.value = null
     isConnected.value = false
+    clearSession()
   }
 
   return {
@@ -453,7 +557,9 @@ export function useRoom() {
     // Actions
     createRoom,
     joinRoom,
+    rejoinRoom,
     checkRoom,
+    loadSession,
     castVote,
     clearVote,
     revealVotes,

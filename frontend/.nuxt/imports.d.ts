@@ -33,3 +33,4 @@ export { definePageMeta } from '../node_modules/nuxt/dist/pages/runtime/composab
 export { defineLazyHydrationComponent } from '#app/composables/lazy-hydration';
 export { FIBONACCI_DECK, MODIFIED_FIBONACCI_DECK, usePokerDeck } from '../composables/usePokerDeck';
 export { useRoom } from '../composables/useRoom';
+export { useNuxtDevTools } from '../node_modules/@nuxt/devtools/dist/runtime/use-nuxt-devtools';

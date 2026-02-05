@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const route = useRoute()
-const { room, player, isRevealed, joinRoom, checkRoom } = useRoom()
+const { room, player, isRevealed, joinRoom, rejoinRoom, checkRoom, loadSession } = useRoom()
 
 const roomId = computed(() => route.params.id as string)
 
@@ -17,14 +17,21 @@ const error = ref('')
 const isLoading = ref(false)
 
 onMounted(async () => {
-  if (!isInRoom.value) {
-    // Check if the room exists on the server
-    const exists = await checkRoom(roomId.value)
-    if (exists) {
-      showJoinPrompt.value = true
-    } else {
-      roomNotFound.value = true
-    }
+  if (isInRoom.value) return
+
+  // Try to rejoin with saved session (handles page reload)
+  const session = loadSession()
+  if (session && session.roomId === roomId.value) {
+    const rejoined = await rejoinRoom(roomId.value)
+    if (rejoined) return
+  }
+
+  // No saved session or rejoin failed — check if room exists
+  const exists = await checkRoom(roomId.value)
+  if (exists) {
+    showJoinPrompt.value = true
+  } else {
+    roomNotFound.value = true
   }
 })
 
