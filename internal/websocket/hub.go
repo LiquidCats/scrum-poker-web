@@ -23,8 +23,8 @@ type Hub struct {
 	roomManager *room.Manager
 
 	// Registered clients by room
-	mu      sync.RWMutex
-	rooms   map[string]map[*Client]bool
+	mu    sync.RWMutex
+	rooms map[string]map[*Client]bool
 
 	// Register requests from clients
 	register chan *Client
@@ -122,29 +122,29 @@ func (h *Hub) HandleMessage(client *Client, msg models.WSMessage) {
 	case models.MsgUpdateSettings:
 		h.handleUpdateSettings(client, msg.Payload)
 	case models.MsgPing:
-		client.Send(models.WSMessage{Type: models.MsgPong})
+		_ = client.Send(models.WSMessage{Type: models.MsgPong})
 	default:
-		client.Send(models.NewErrorMessage("unknown_type", "Unknown message type"))
+		_ = client.Send(models.NewErrorMessage("unknown_type", "Unknown message type"))
 	}
 }
 
 // handleJoinRoom handles room join requests
-func (h *Hub) handleJoinRoom(client *Client, payload interface{}) {
+func (h *Hub) handleJoinRoom(client *Client, payload any) {
 	data, err := json.Marshal(payload)
 	if err != nil {
-		client.Send(models.NewErrorMessage("invalid_payload", "Invalid join payload"))
+		_ = client.Send(models.NewErrorMessage("invalid_payload", "Invalid join payload"))
 		return
 	}
 
 	var joinPayload models.JoinRoomPayload
 	if err := json.Unmarshal(data, &joinPayload); err != nil {
-		client.Send(models.NewErrorMessage("invalid_payload", "Invalid join payload"))
+		_ = client.Send(models.NewErrorMessage("invalid_payload", "Invalid join payload"))
 		return
 	}
 
 	// Validate input
 	if joinPayload.RoomID == "" || joinPayload.PlayerName == "" {
-		client.Send(models.NewErrorMessage("validation_error", "Room ID and player name are required"))
+		_ = client.Send(models.NewErrorMessage("validation_error", "Room ID and player name are required"))
 		return
 	}
 
@@ -157,7 +157,7 @@ func (h *Hub) handleJoinRoom(client *Client, payload interface{}) {
 	// Join room
 	room, player, err := h.roomManager.JoinRoom(joinPayload.RoomID, playerID, joinPayload.PlayerName)
 	if err != nil {
-		client.Send(models.NewErrorMessage("room_not_found", err.Error()))
+		_ = client.Send(models.NewErrorMessage("room_not_found", err.Error()))
 		return
 	}
 
@@ -173,7 +173,7 @@ func (h *Hub) handleJoinRoom(client *Client, payload interface{}) {
 	h.mu.Unlock()
 
 	// Send connected confirmation
-	client.Send(models.WSMessage{
+	_ = client.Send(models.WSMessage{
 		Type: models.MsgConnected,
 		Payload: models.ConnectedPayload{
 			PlayerID: playerID,
@@ -182,7 +182,7 @@ func (h *Hub) handleJoinRoom(client *Client, payload interface{}) {
 	})
 
 	// Send current room state to joining client
-	client.Send(models.NewRoomStateMessage(room))
+	_ = client.Send(models.NewRoomStateMessage(room))
 
 	// Notify other players
 	h.BroadcastToRoom(joinPayload.RoomID, models.WSMessage{
@@ -240,30 +240,30 @@ func (h *Hub) handleLeaveRoom(client *Client) {
 func (h *Hub) handleCastVote(client *Client, payload interface{}) {
 	roomID, playerID := client.GetRoom()
 	if roomID == "" {
-		client.Send(models.NewErrorMessage("not_in_room", "You must join a room first"))
+		_ = client.Send(models.NewErrorMessage("not_in_room", "You must join a room first"))
 		return
 	}
 
 	data, err := json.Marshal(payload)
 	if err != nil {
-		client.Send(models.NewErrorMessage("invalid_payload", "Invalid vote payload"))
+		_ = client.Send(models.NewErrorMessage("invalid_payload", "Invalid vote payload"))
 		return
 	}
 
 	var votePayload models.VotePayload
 	if err := json.Unmarshal(data, &votePayload); err != nil {
-		client.Send(models.NewErrorMessage("invalid_payload", "Invalid vote payload"))
+		_ = client.Send(models.NewErrorMessage("invalid_payload", "Invalid vote payload"))
 		return
 	}
 
 	room := h.roomManager.GetRoom(roomID)
 	if room == nil {
-		client.Send(models.NewErrorMessage("room_not_found", "Room not found"))
+		_ = client.Send(models.NewErrorMessage("room_not_found", "Room not found"))
 		return
 	}
 
 	if !room.CastVote(playerID, votePayload.Vote) {
-		client.Send(models.NewErrorMessage("vote_failed", "Could not cast vote"))
+		_ = client.Send(models.NewErrorMessage("vote_failed", "Could not cast vote"))
 		return
 	}
 
@@ -323,7 +323,7 @@ func (h *Hub) handleRevealVotes(client *Client) {
 
 	// Check if player is host
 	if room.HostID != playerID {
-		client.Send(models.NewErrorMessage("not_authorized", "Only the host can reveal votes"))
+		_ = client.Send(models.NewErrorMessage("not_authorized", "Only the host can reveal votes"))
 		return
 	}
 
@@ -360,7 +360,7 @@ func (h *Hub) handleResetRound(client *Client) {
 
 	// Check if player is host
 	if room.HostID != playerID {
-		client.Send(models.NewErrorMessage("not_authorized", "Only the host can reset the round"))
+		_ = client.Send(models.NewErrorMessage("not_authorized", "Only the host can reset the round"))
 		return
 	}
 
@@ -386,7 +386,7 @@ func (h *Hub) handleSetIssue(client *Client, payload interface{}) {
 
 	// Check if player is host
 	if room.HostID != playerID {
-		client.Send(models.NewErrorMessage("not_authorized", "Only the host can set the issue"))
+		_ = client.Send(models.NewErrorMessage("not_authorized", "Only the host can set the issue"))
 		return
 	}
 
@@ -422,7 +422,7 @@ func (h *Hub) handleUpdateSettings(client *Client, payload interface{}) {
 
 	// Check if player is host
 	if room.HostID != playerID {
-		client.Send(models.NewErrorMessage("not_authorized", "Only the host can update settings"))
+		_ = client.Send(models.NewErrorMessage("not_authorized", "Only the host can update settings"))
 		return
 	}
 
