@@ -1,6 +1,6 @@
 module github.com/scrum-poker/backend
 
-go 1.25
+go 1.25.5
 
 require (
 	github.com/fasthttp/websocket v1.5.12
