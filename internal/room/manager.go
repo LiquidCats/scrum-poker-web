@@ -25,10 +25,10 @@ func NewManager(cleanupInterval time.Duration) *Manager {
 		cleanup:  cleanupInterval,
 		stopChan: make(chan struct{}),
 	}
-	
+
 	// Start cleanup goroutine
 	go m.cleanupRoutine()
-	
+
 	return m
 }
 
@@ -36,10 +36,10 @@ func NewManager(cleanupInterval time.Duration) *Manager {
 func (m *Manager) CreateRoom(name, hostID, hostName string) (*models.Room, *models.Player) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	roomID := m.generateRoomCode()
 	room := models.NewRoom(roomID, name, hostID)
-	
+
 	// Create host player
 	host := &models.Player{
 		ID:       hostID,
@@ -49,10 +49,10 @@ func (m *Manager) CreateRoom(name, hostID, hostName string) (*models.Room, *mode
 		JoinedAt: time.Now(),
 	}
 	room.AddPlayer(host)
-	
+
 	m.rooms[roomID] = room
 	log.Printf("Room created: %s (%s) by %s", roomID, name, hostName)
-	
+
 	return room, host
 }
 
@@ -67,19 +67,19 @@ func (m *Manager) GetRoom(roomID string) *models.Room {
 func (m *Manager) JoinRoom(roomID, playerID, playerName string) (*models.Room, *models.Player, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	room, exists := m.rooms[roomID]
 	if !exists {
 		return nil, nil, fmt.Errorf("room not found: %s", roomID)
 	}
-	
+
 	// Check if player already exists (reconnection)
 	if existing := room.GetPlayer(playerID); existing != nil {
 		existing.IsOnline = true
 		log.Printf("Player reconnected: %s to room %s", playerName, roomID)
 		return room, existing, nil
 	}
-	
+
 	// Create new player
 	player := &models.Player{
 		ID:       playerID,
@@ -89,7 +89,7 @@ func (m *Manager) JoinRoom(roomID, playerID, playerName string) (*models.Room, *
 		JoinedAt: time.Now(),
 	}
 	room.AddPlayer(player)
-	
+
 	log.Printf("Player joined: %s to room %s", playerName, roomID)
 	return room, player, nil
 }
@@ -98,26 +98,26 @@ func (m *Manager) JoinRoom(roomID, playerID, playerName string) (*models.Room, *
 func (m *Manager) LeaveRoom(roomID, playerID string) (*models.Player, bool) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	room, exists := m.rooms[roomID]
 	if !exists {
 		return nil, false
 	}
-	
+
 	player := room.RemovePlayer(playerID)
 	if player == nil {
 		return nil, false
 	}
-	
+
 	log.Printf("Player left: %s from room %s", player.Name, roomID)
-	
+
 	// Check if room is empty
 	if room.IsEmpty() {
 		delete(m.rooms, roomID)
 		log.Printf("Room deleted (empty): %s", roomID)
 		return player, true
 	}
-	
+
 	return player, false
 }
 
@@ -148,7 +148,7 @@ func (m *Manager) GetRoomCount() int {
 func (m *Manager) GetPlayerCount() int {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	count := 0
 	for _, room := range m.rooms {
 		count += room.PlayerCount()
@@ -160,7 +160,7 @@ func (m *Manager) GetPlayerCount() int {
 func (m *Manager) ListRooms() []map[string]interface{} {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	rooms := make([]map[string]interface{}, 0, len(m.rooms))
 	for _, room := range m.rooms {
 		rooms = append(rooms, map[string]interface{}{
@@ -179,22 +179,22 @@ func (m *Manager) ListRooms() []map[string]interface{} {
 func (m *Manager) generateRoomCode() string {
 	const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	const codeLen = 6
-	
-	for attempts := 0; attempts < 100; attempts++ {
+
+	for range 100 {
 		b := make([]byte, codeLen)
-		rand.Read(b)
-		
+		_, _ = rand.Read(b)
+
 		code := make([]byte, codeLen)
 		for i := range code {
 			code[i] = chars[int(b[i])%len(chars)]
 		}
-		
+
 		roomCode := string(code)
 		if _, exists := m.rooms[roomCode]; !exists {
 			return roomCode
 		}
 	}
-	
+
 	// Fallback: use timestamp-based code
 	return fmt.Sprintf("%06d", time.Now().UnixNano()%1000000)
 }
@@ -203,7 +203,7 @@ func (m *Manager) generateRoomCode() string {
 func (m *Manager) cleanupRoutine() {
 	ticker := time.NewTicker(m.cleanup)
 	defer ticker.Stop()
-	
+
 	for {
 		select {
 		case <-ticker.C:
@@ -218,9 +218,9 @@ func (m *Manager) cleanupRoutine() {
 func (m *Manager) cleanupInactiveRooms() {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	threshold := time.Now().Add(-2 * time.Hour) // 2 hours inactivity
-	
+
 	for id, room := range m.rooms {
 		if room.LastActivity.Before(threshold) || room.IsEmpty() {
 			delete(m.rooms, id)
