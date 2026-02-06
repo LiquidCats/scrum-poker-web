@@ -1,0 +1,26 @@
+name: Go Tests
+permissions:
+  contents: read
+
+on:
+  workflow_call:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set Up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Check Out
+        uses: actions/checkout@v5
+
+      - name: Run Tests
+        run: go test -v ./...
