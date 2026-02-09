@@ -39,7 +39,7 @@ jobs:
           push: true
           tags: |
             ghcr.io/scrum-poker/frontend:${{ github.ref_name }}
-            ghcr.io/scrum-poker/frontend:${{ github.sha::0:8 }}
+            ghcr.io/scrum-poker/frontend:${{ github.sha }}
             ghcr.io/scrum-poker/frontend::latest
 
       - name: Build and push Docker image (push)
@@ -51,5 +51,5 @@ jobs:
           file: ./frontend/Dockerfile
           push: true
           tags: |
-            ghcr.io/scrum-poker/frontend::${{ github.sha::0:8 }}
+            ghcr.io/scrum-poker/frontend::${{ github.sha }}
             ghcr.io/scrum-poker/frontend::latest
