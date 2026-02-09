@@ -29,8 +29,10 @@ jobs:
     uses: ./.github/workflows/go-code-style.yml
 
   backend:
+    if: ${{ inputs.build == 'backend' || inputs.build == 'both' }}
     needs: [go-tests, go-cs]
     uses: ./.github/workflows/backend-build.yml
 
   frontend:
+    if: ${{ inputs.build == 'frontend' || inputs.build == 'both' }}
     uses: ./.github/workflows/frontend-build.yml
