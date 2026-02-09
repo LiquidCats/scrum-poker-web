@@ -1,384 +1,148 @@
-# Scrum Poker Backend
+# Scrum Poker
 
-A real-time WebSocket-based backend for the Scrum Poker application, built with Go.
-
-## Features
-
-- 🔌 **WebSocket Support** - Real-time bidirectional communication
-- 🏠 **Room Management** - Create, join, and manage poker rooms
-- 🗳️ **Voting System** - Cast, reveal, and reset votes
-- 📊 **Statistics** - Automatic calculation of average, median, mode
-- 🔄 **Auto-cleanup** - Inactive rooms are automatically removed
-- 🐳 **Docker Ready** - Easy containerized deployment
-- ⚡ **High Performance** - Concurrent room handling with Go
+A real-time planning poker application for agile teams. Built with a Go backend and Nuxt 3 frontend, communicating over WebSocket for instant updates.
 
 ## Tech Stack
 
-- **Language**: Go 1.22+
-- **Router**: Chi v5
-- **WebSocket**: Gorilla WebSocket
-- **UUID**: Google UUID
+### Backend
+- **Go 1.25** with FastHTTP
+- **Gorilla WebSocket** (fasthttp adapter)
+- **Google UUID** for identifier generation
+
+### Frontend
+- **Nuxt 3** (Vue 3)
+- **Tailwind CSS**
+- **VueUse**
+- **TypeScript**
 
 ## Quick Start
 
 ### Prerequisites
 
-- Go 1.22 or later
-- (Optional) Docker & Docker Compose
+- Docker & Docker Compose
+
+### Run with Docker Compose
+
+```bash
+docker-compose up -d
+```
+
+- Frontend: `http://localhost:3000`
+- Backend: `http://localhost:8080`
 
 ### Run Locally
 
+**Backend:**
 ```bash
-# Clone and navigate
-cd scrum-poker-backend
-
-# Download dependencies
 go mod download
-
-# Run server
 go run ./cmd/server
-
-# Or use Make
-make run
 ```
 
-Server starts at `http://localhost:8080`
-
-### Run with Docker
-
+**Frontend:**
 ```bash
-# Build and run
-docker-compose up -d
-
-# Or build manually
-docker build -t scrum-poker-backend .
-docker run -p 8080:8080 scrum-poker-backend
-```
-
-## API Reference
-
-### REST Endpoints
-
-#### Health Check
-```
-GET /health
-```
-Returns server health and statistics.
-
-#### Create Room
-```
-POST /api/rooms
-Content-Type: application/json
-
-{
-  "name": "Sprint Planning",
-  "hostName": "John Doe"
-}
-```
-Response:
-```json
-{
-  "room": { ... },
-  "playerId": "uuid"
-}
-```
-
-#### Check Room Exists
-```
-GET /api/rooms/{roomId}/check
-```
-
-#### Get Room
-```
-GET /api/rooms/{roomId}
-```
-
-#### Join Room
-```
-POST /api/rooms/{roomId}/join
-Content-Type: application/json
-
-{
-  "playerName": "Jane Doe",
-  "playerId": "optional-for-reconnection"
-}
-```
-
-#### Get Valid Cards
-```
-GET /api/cards
-```
-
-#### Get Stats
-```
-GET /api/stats
-```
-
-### WebSocket API
-
-Connect to WebSocket:
-```
-ws://localhost:8080/ws
-```
-
-#### Client → Server Messages
-
-**Join Room**
-```json
-{
-  "type": "join_room",
-  "payload": {
-    "roomId": "ABC123",
-    "playerName": "John Doe",
-    "playerId": "optional-uuid"
-  }
-}
-```
-
-**Cast Vote**
-```json
-{
-  "type": "cast_vote",
-  "payload": {
-    "vote": "5"
-  }
-}
-```
-
-**Clear Vote**
-```json
-{
-  "type": "clear_vote"
-}
-```
-
-**Reveal Votes** (host only)
-```json
-{
-  "type": "reveal_votes"
-}
-```
-
-**Reset Round** (host only)
-```json
-{
-  "type": "reset_round"
-}
-```
-
-**Set Issue** (host only)
-```json
-{
-  "type": "set_issue",
-  "payload": {
-    "issue": "JIRA-123: Implement login feature"
-  }
-}
-```
-
-**Update Settings** (host only)
-```json
-{
-  "type": "update_settings",
-  "payload": {
-    "settings": {
-      "allowSpectators": true,
-      "autoReveal": false,
-      "showAverage": true,
-      "timer": null
-    }
-  }
-}
-```
-
-**Ping**
-```json
-{
-  "type": "ping"
-}
-```
-
-#### Server → Client Messages
-
-**Connected**
-```json
-{
-  "type": "connected",
-  "payload": {
-    "playerId": "uuid",
-    "roomId": "ABC123"
-  }
-}
-```
-
-**Room State**
-```json
-{
-  "type": "room_state",
-  "payload": {
-    "id": "ABC123",
-    "name": "Sprint Planning",
-    "hostId": "uuid",
-    "players": [...],
-    "currentIssue": "...",
-    "status": "waiting|voting|revealed",
-    "deck": ["0", "½", "1", ...],
-    "settings": {...},
-    "votedCount": 3,
-    "playerCount": 5
-  }
-}
-```
-
-**Player Joined**
-```json
-{
-  "type": "player_joined",
-  "payload": {
-    "player": {
-      "id": "uuid",
-      "name": "John",
-      "isHost": false,
-      "hasVoted": false,
-      "isOnline": true
-    }
-  }
-}
-```
-
-**Vote Cast**
-```json
-{
-  "type": "vote_cast",
-  "payload": {
-    "playerId": "uuid",
-    "hasVoted": true,
-    "votedCount": 3,
-    "totalCount": 5
-  }
-}
-```
-
-**Votes Revealed**
-```json
-{
-  "type": "votes_revealed",
-  "payload": {
-    "players": [...],
-    "results": {
-      "average": 5.5,
-      "median": 5,
-      "mode": "5",
-      "consensus": false,
-      "distribution": {"3": 1, "5": 2, "8": 1},
-      "totalVotes": 4,
-      "validVotes": 4
-    }
-  }
-}
-```
-
-**Round Reset**
-```json
-{
-  "type": "round_reset",
-  "payload": { /* room state */ }
-}
-```
-
-**Error**
-```json
-{
-  "type": "error",
-  "payload": {
-    "code": "error_code",
-    "message": "Human readable message"
-  }
-}
+cd frontend
+npm ci
+npm run dev
 ```
 
 ## Project Structure
 
 ```
-scrum-poker-backend/
-├── cmd/
-│   └── server/
-│       └── main.go           # Entry point
+scrum-poker-web/
+├── cmd/server/                  # Backend entry point
 ├── internal/
-│   ├── handlers/
-│   │   └── handlers.go       # HTTP handlers
-│   ├── models/
-│   │   ├── models.go         # Domain models
-│   │   └── messages.go       # WebSocket messages
-│   ├── room/
-│   │   └── manager.go        # Room lifecycle
-│   └── websocket/
-│       ├── client.go         # WS client
-│       └── hub.go            # WS hub
-├── Dockerfile
+│   ├── handlers/                # HTTP & WebSocket handlers
+│   ├── models/                  # Domain models & message types
+│   ├── room/                    # Room lifecycle management
+│   └── websocket/               # WebSocket client & hub
+├── frontend/
+│   ├── pages/                   # Nuxt pages (home, room/[id])
+│   ├── components/              # Vue components
+│   ├── composables/             # useRoom, usePokerDeck
+│   ├── types/                   # TypeScript definitions
+│   └── Dockerfile
+├── .github/workflows/           # CI/CD pipelines
+├── Dockerfile                   # Backend container
 ├── docker-compose.yml
-├── Makefile
-├── go.mod
-└── README.md
+└── Makefile
 ```
+
+## Features
+
+- **Real-time voting** over WebSocket with instant state sync
+- **Room management** with 6-character invite codes
+- **Fibonacci deck** (0, 1/2, 1, 2, 3, 5, 8, 13, 21, 34, 55, 89, ?, coffee)
+- **Vote statistics** — average, median, mode, consensus detection
+- **Host controls** — reveal votes, reset round, set current issue, configure settings
+- **Auto-reveal** — optional automatic reveal when all players vote
+- **Session persistence** — players can rejoin after page refresh
+- **Auto-cleanup** — inactive rooms are removed after 2 hours
+
+## API
+
+### REST Endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/rooms` | Create a room |
+| `GET` | `/api/rooms/{roomId}` | Get room state |
+| `GET` | `/api/rooms/{roomId}/check` | Check if room exists |
+| `POST` | `/api/rooms/{roomId}/join` | Join a room |
+| `GET` | `/api/cards` | Get valid card values |
+| `GET` | `/api/stats` | Server statistics |
+| `GET` | `/health` | Health check |
+
+### WebSocket
+
+Connect at `ws://localhost:8080/ws`.
+
+**Client messages:** `join_room`, `cast_vote`, `clear_vote`, `reveal_votes`, `reset_round`, `set_issue`, `update_settings`, `ping`
+
+**Server messages:** `connected`, `room_state`, `player_joined`, `vote_cast`, `votes_revealed`, `round_reset`, `error`, `pong`
 
 ## Configuration
 
-Environment variables:
-
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `PORT` | `8080` | Server port |
+| `PORT` | `8080` | Backend server port |
 | `ALLOWED_ORIGINS` | `*` | CORS allowed origins |
+| `NUXT_PUBLIC_API_BASE` | — | Backend URL for frontend |
 
 ## Development
 
 ```bash
-# Install air for hot reload
-go install github.com/air-verse/air@latest
-
-# Run with hot reload
-make dev
-
-# Run tests
+# Run backend tests
 make test
 
-# Run linter
+# Lint backend
 make lint
 
-# Format code
-make fmt
+# Auto-fix lint issues
+make lint-fix
+
+# Generate mocks
+make mock
 ```
 
-## Frontend Integration
-
-Update the Nuxt frontend to connect to this backend:
-
-```typescript
-// composables/useWebSocket.ts
-const WS_URL = 'ws://localhost:8080/ws'
-const API_URL = 'http://localhost:8080/api'
-
-export function useWebSocket() {
-  const socket = ref<WebSocket | null>(null)
-  
-  const connect = () => {
-    socket.value = new WebSocket(WS_URL)
-    
-    socket.value.onmessage = (event) => {
-      const message = JSON.parse(event.data)
-      handleMessage(message)
-    }
-  }
-  
-  const send = (type: string, payload?: any) => {
-    socket.value?.send(JSON.stringify({ type, payload }))
-  }
-  
-  return { connect, send, socket }
-}
+Frontend commands:
+```bash
+cd frontend
+npm run dev          # Dev server
+npm run build        # Production build
+npm run lint         # ESLint
+npm run typecheck    # Type checking
 ```
+
+## CI/CD
+
+GitHub Actions workflows:
+
+- **build.yml** — orchestrates backend and frontend builds on push to `main`
+- **backend-build.yml** — builds and pushes backend Docker image to GHCR (multi-arch)
+- **frontend-build.yml** — builds and pushes frontend Docker image to GHCR (multi-arch)
+- **go-tests.yml** — runs Go test suite
+- **go-code-style.yml** — runs linter checks
 
 ## License
 
-MIT License
+AGPL-3.0

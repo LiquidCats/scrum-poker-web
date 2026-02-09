@@ -1,6 +1,17 @@
 name: Build
 
 on:
+  workflow_call:
+    inputs:
+      build:
+        description: What to build
+        required: true
+        default: both
+        type: choice
+        options:
+          - frontend
+          - backend
+          - both
   push:
     branches:
       - master
@@ -11,7 +22,14 @@ permissions:
   id-token: write
 
 jobs:
+  go-tests:
+    uses: ./.github/workflows/go-tests.yml
+
+  go-cs:
+    uses: ./.github/workflows/go-code-style.yml
+
   backend:
+    needs: [go-tests, go-cs]
     uses: ./.github/workflows/backend-build.yml
 
   frontend:

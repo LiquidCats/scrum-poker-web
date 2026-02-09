@@ -1,6 +1,7 @@
 name: Build Backend
 
 on:
+  workflow_call:
   push:
     tags:
       - "backend_v*"
