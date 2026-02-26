@@ -52,9 +52,9 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.repository.outputs.lowercase }}/scrum-poker-backend:${{ github.ref_name }}
-            ghcr.io/${{ steps.repository.outputs.lowercase }}/scrum-poker-backend:${{ github.sha }}
-            ghcr.io/${{ steps.repository.outputs.lowercase }}/scrum-poker-backend:latest
+            ghcr.io/${{ steps.repository.outputs.lowercase }}/backend:${{ github.ref_name }}
+            ghcr.io/${{ steps.repository.outputs.lowercase }}/backend:${{ github.sha }}
+            ghcr.io/${{ steps.repository.outputs.lowercase }}/backend:latest
 
       - name: Build and push Docker image (push)
         if: startsWith(github.ref, 'refs/heads/main')
@@ -65,5 +65,5 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ steps.repository.outputs.lowercase }}/scrum-poker-backend:${{ github.sha }}
-            ghcr.io/${{ steps.repository.outputs.lowercase }}/scrum-poker-backend:latest
+            ghcr.io/${{ steps.repository.outputs.lowercase }}/backend:${{ github.sha }}
+            ghcr.io/${{ steps.repository.outputs.lowercase }}/backend:latest
