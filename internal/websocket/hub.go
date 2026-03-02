@@ -78,23 +78,26 @@ func (h *Hub) handleDisconnect(client *Client) {
 	}
 	h.mu.Unlock()
 
-	// Update player status in room
+	// Remove player from the room entirely
+	player, roomDeleted := h.roomManager.LeaveRoom(roomID, playerID)
+	if player == nil || roomDeleted {
+		return
+	}
+
+	// Notify remaining players
+	h.BroadcastToRoom(roomID, models.WSMessage{
+		Type: models.MsgPlayerLeft,
+		Payload: models.PlayerEventPayload{
+			PlayerID: playerID,
+		},
+	}, nil)
+
+	// Broadcast updated room state
 	if room := h.roomManager.GetRoom(roomID); room != nil {
-		room.SetPlayerOnline(playerID, false)
-
-		// Notify other players
-		h.BroadcastToRoom(roomID, models.WSMessage{
-			Type: models.MsgPlayerLeft,
-			Payload: models.PlayerEventPayload{
-				PlayerID: playerID,
-			},
-		}, client)
-
-		// Broadcast updated room state
 		h.BroadcastToRoom(roomID, models.NewRoomStateMessage(room), nil)
 	}
 
-	log.Printf("Client disconnected from room %s", roomID)
+	log.Printf("Client disconnected from room %s, player %s removed", roomID, playerID)
 }
 
 // RegisterClient registers a client to the hub
