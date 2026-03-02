@@ -1,6 +1,7 @@
 .claude/
 .idea/
 .nuxt/
+frontend/.nuxt/
 .output/
 node_modules/
 .env
