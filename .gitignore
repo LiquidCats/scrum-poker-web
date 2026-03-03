@@ -9,3 +9,4 @@ frontend/node_modules/
 *.key
 .secret/
 *.secret
+.DS_Store
