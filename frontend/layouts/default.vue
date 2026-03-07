@@ -1,5 +1,6 @@
 <script setup lang="ts">
 const { room, leaveRoom } = useRoom()
+const {public:{github}} = useRuntimeConfig()
 
 const handleLeave = () => {
   leaveRoom()
@@ -53,11 +54,10 @@ const handleLeave = () => {
 
     <!-- Footer -->
     <footer class="relative z-10 px-6 py-4 border-t border-white/5">
-      <div class="max-w-7xl mx-auto flex items-center justify-between text-sm text-white/30">
-        <span>Built with Nuxt 3</span>
+      <div class="max-w-7xl mx-auto flex items-center justify-end text-sm text-white/30">
         <div class="flex items-center gap-4">
-          <a href="#" class="hover:text-poker-gold transition-colors">Help</a>
-          <a href="#" class="hover:text-poker-gold transition-colors">GitHub</a>
+<!--          <a href="#" class="hover:text-poker-gold transition-colors">Help</a>-->
+          <a :href="github" class="hover:text-poker-gold transition-colors">GitHub</a>
         </div>
       </div>
     </footer>

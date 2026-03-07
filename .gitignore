@@ -3,6 +3,7 @@
 .nuxt/
 frontend/.nuxt/
 .output/
+frontend/.output/
 node_modules/
 frontend/node_modules/
 .env
