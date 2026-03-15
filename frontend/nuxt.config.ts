@@ -37,6 +37,11 @@ export default defineNuxtConfig({
     pageTransition: { name: 'page', mode: 'out-in' }
   },
 
+  gtag: {
+    enabled: process.env.NODE_ENV === 'production',
+    id: 'G-8VRLGYZMS9'
+  },
+
   css: ['~/assets/css/main.css'],
 
   compatibilityDate: '2024-01-01',
