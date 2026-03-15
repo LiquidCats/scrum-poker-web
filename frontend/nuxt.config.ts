@@ -40,7 +40,7 @@ export default defineNuxtConfig({
 
   gtag: {
     enabled: process.env.NODE_ENV === 'production',
-    id: 'G-8VRLGYZMS9'
+    id: 'G-5WBHV3DLQ3'
   },
 
   css: ['~/assets/css/main.css'],
